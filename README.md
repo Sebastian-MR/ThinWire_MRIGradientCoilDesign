@@ -1,4 +1,4 @@
-# GradStream
+# ThinWire_MRIGradientCoilDesign
 A gradient coil design tool for Magnetic resonance imaging (MRI)
 
 This code demonstrates the use of thin wires to approximate a current
