@@ -10,6 +10,4 @@ deployed to derive a ralizable coil design.
 This ,ethod may be used for simple geometries. However, no generalization
 for arbitrary surfaces.
 
-2019-11
 Sebastian Littin
-
