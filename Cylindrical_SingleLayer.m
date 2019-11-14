@@ -14,6 +14,8 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
+plot_all = 1; % optionally plot all intermediate step
+
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 1;
 segments_angular=56;
@@ -23,7 +25,7 @@ r_coil = 0.35;  % 700mm coil diameter
 
 
 arc_angle = 360/(segments_angular);
-[elm_angle, elm_z] = ndgrid((-0:segments_angular-0)*arc_angle, (-half_length:len_step:half_length)); 
+[elm_angle, elm_z] = ndgrid((0:segments_angular-1)*arc_angle, (-half_length:len_step:half_length)); 
 CoilDefinition(1).num_elements=size(elm_angle);
 elm_angle_shift = elm_angle([2:end,1],:);
 
@@ -35,8 +37,10 @@ CoilDefinition(1).thin_wire_nodes_stop = [cosd(elm_angle_shift(:))*r_coil,sind(e
 CoilDefinition(1).num_elements = size(elm_angle);
 
 
-%% plot the thin wire elements
 
+
+% possibility to plot thin wire elements
+if plot_all == 1
 figure;
 hold all
 for n = 1:length(CoilDefinition(1).thin_wire_nodes_start)
@@ -47,6 +51,10 @@ plot3([CoilDefinition(1).thin_wire_nodes_start(n,1) CoilDefinition(1).thin_wire_
 end
 hold off
 axis equal tight
+title('Thin-wire current elements');
+view([1 1 1])
+end
+
 
 % Some definitions for 3D contour plotting...
 CoilDefinition(1).Radius = r_coil;
@@ -56,20 +64,24 @@ CoilDefinition(1).Length = half_length*2;
 
 % Definition of main target points in a 3D-volume
 
-TargetDefinition.shape = 'cylinder';
+TargetDefinition.shape = 'sphere';
 TargetDefinition.radius = 0.15;
 TargetDefinition.length = 0.3;
 TargetDefinition.resol_radial = 3;
-TargetDefinition.resol_angular = 16;
+TargetDefinition.resol_angular = 32;
 TargetDefinition.resol_length = 8;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'y';
+TargetDefinition.direction = 'x';
 
 target_points = Make_Target(TargetDefinition);
 
 % plot target
+if plot_all == 1
 figure; scatter3(target_points.points.x1(:), target_points.points.x2(:), target_points.points.x3(:), ones(size(target_points.points.x1(:)))*25, target_points.field(:))
 axis equal tight
+title('Target Points and Field');
+view([1 1 1])
+end
 
 x1 = target_points.points.x1(:);
 x2 = target_points.points.x2(:);
@@ -99,12 +111,12 @@ ElementCurrents_Unreg(1).Stream = pinv(Sensitivity(1).ElementFieldsStream(:,:))*
 
 %% Plot the unregularized solution
 
+figure; imab(reshape(ElementCurrents_Unreg(1).Stream,size(elm_angle)-[0 1])); colorbar; title('Unregularized Stream Function');
 
-figure; imab(reshape(ElementCurrents_Unreg(1).Stream,size(elm_angle)-[0 1])); colorbar; title('coil currents Main');
+if plot_all == 1
 PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents_Unreg)
-
-% ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents_Unreg, 13)
-
+ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents_Unreg, 13)
+end
 
 %% Calculate the regularized Solution
 
@@ -112,16 +124,18 @@ lambda=1;
 
 E_Mat = Sensitivity(1).ElementFieldsStream(:,:);
 
-ElementCurrents_Unreg=TikhonovReg(E_Mat, btarget, 0.0077); % regularisation automatically penelizes total power
+ElementCurrents_Reg=TikhonovReg(E_Mat, btarget, 0.0077); % regularisation automatically penelizes total power
 
 
 %% Plot currents in 2D
 
 
-ElementCurrents(1).Stream = reshape(ElementCurrents_Unreg,size(elm_angle)-[0 1]);
+ElementCurrentsReg(1).Stream = reshape(ElementCurrents_Reg,size(elm_angle)-[0 1]);
 
-figure; imab(ElementCurrents(1).Stream); colorbar; title('coil currents Main');
-PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
-ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents, 13)
+figure; imab(ElementCurrentsReg(1).Stream); colorbar; title('Regularized Stream Function');
 
+if plot_all == 1
+PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrentsReg)
+ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrentsReg, 19)
+end
 
