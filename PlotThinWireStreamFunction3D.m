@@ -29,16 +29,16 @@ elseif CoilDefinition(1).StreamDirection == 2
 end
 
 ElmtsPlot = reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]));
-
+ 
 % tiny Hack to plot all radial elements
-% sx_p = [sx; sx(1,:)];
-% sy_p = [sy; sy(1,:)];
-% sz_p = [sz; sz(1,:)];
-% ElmtsPlot_p = [ElmtsPlot; ElmtsPlot(1,:)];
+sx_p = [sx; sx(1,:)];
+sy_p = [sy; sy(1,:)];
+sz_p = [sz; sz(1,:)];
+ElmtsPlot_p = [ElmtsPlot; ElmtsPlot(1,:)];
 
 figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
 hold all
-surf(sx,sy,sz,ElmtsPlot,'EdgeColor','none');%,'FaceColor','interp' );
+surf(sx_p,sy_p,sz_p,ElmtsPlot_p,'EdgeColor','none');%,'FaceColor','interp' );
 hold off
 xlabel('x-Axis [m]');
 ylabel('y-Axis [m]');
