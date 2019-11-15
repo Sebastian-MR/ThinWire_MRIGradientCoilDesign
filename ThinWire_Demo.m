@@ -149,12 +149,12 @@ ElementCurrents_Balance_reshape = reshape(ElementCurrents_Balance,size(elm_angle
 % prevent from shifts along z an interation is performed from both sides
 % and added.
 
-Stream_Reg=cumsum(ElementCurrents_Balance_reshape,2,'forward');
-Stream_Reg_rev=cumsum(ElementCurrents_Balance_reshape,2,'reverse');
+Stream_Reg=cumsum(ElementCurrents_Balance_reshape(:,end:-1:1),2);
+Stream_Reg_rev=cumsum(ElementCurrents_Balance_reshape,2);
 
 Stream = zeros(size(Stream_Reg)+[0 1]);
 Stream(:,2:end) = Stream_Reg./2;
-Stream(:,1:end-1) = Stream(:,1:end-1)-Stream_Reg_rev./2;
+Stream(:,1:end-1) = Stream(:,1:end-1)-Stream_Reg_rev(:,end:-1:1)./2;
 
 % Stream = -Stream_Reg_rev;
 
