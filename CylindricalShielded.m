@@ -92,7 +92,7 @@ TargetDefinition.radius = 0.15;
 TargetDefinition.resol_radial = 2;
 TargetDefinition.resol_angular = 24;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'z';
+TargetDefinition.direction = 'y';
 
 target_main = Make_Target(TargetDefinition);
 
