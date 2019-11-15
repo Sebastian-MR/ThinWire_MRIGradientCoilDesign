@@ -16,14 +16,16 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
+plot_all = 1; % set to 1, to optionally plot intermediate steps
+
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 2;
-segments_angular=36;
+segments_angular=48;
 segments_angular_shield = segments_angular;
 half_length=0.75; % 500mm
-len_step = 0.05; % 20mm
-r_coil = 0.35;  % 700mm coil diameter
-r_shield = 0.43;
+len_step = 0.025; % 20mm
+r_coil = 0.4;  % 700mm coil diameter
+r_shield = 0.5;
 
 arc_angle = 360/(segments_angular);
 [elm_angle, elm_z] = ndgrid((0.5:segments_angular+0.5)*arc_angle, (-half_length:len_step:half_length)); 
@@ -60,35 +62,43 @@ CoilDefinition(2).Length = half_length*2;
 
 %% Definition of target points in a 3D-volume
 
+% define main target
 TargetDefinition.shape = 'sphere';
-TargetDefinition.radius = 0.15;
+TargetDefinition.radius = 0.2;
 TargetDefinition.resol_radial = 3;
-TargetDefinition.resol_angular = 15;
+TargetDefinition.resol_angular = 17;
 TargetDefinition.strength = 5e-3;
 TargetDefinition.direction = 'y';
 
 target_main = Make_Target(TargetDefinition);
 
-% % optionally plot main target
-% figure; scatter3(target_main.points.x1(:), target_main.points.x2(:), target_main.points.x3(:), ones(size(target_main.points.x1(:)))*25, target_main.field(:))
-% axis equal tight
-
+% possibility to plot main target
+if plot_all == 1
+figure; scatter3(target_main.points.x1(:), target_main.points.x2(:), target_main.points.x3(:), ones(size(target_main.points.x1(:)))*25, target_main.field(:))
+axis equal tight
+title('Main Target Points and Field');
+view([1 1 1])
+end
 
 TargetDefinition.shape = 'cylinder';
-TargetDefinition.radius = 0.5;
-TargetDefinition.length = 1.5;
+TargetDefinition.radius = 0.65;
+TargetDefinition.length = 1.2;
 TargetDefinition.resol_radial = 1;
-TargetDefinition.resol_angular = 56;
-TargetDefinition.resol_length = 32;
+TargetDefinition.resol_angular = 48;
+TargetDefinition.resol_length = 24;
 TargetDefinition.strength = 0e-3;
 TargetDefinition.direction = 'y';
 
 target_shield = Make_Target(TargetDefinition);
 
-% % optionally plot shield target
-% figure; scatter3(target_shield.points.x1(:), target_shield.points.x2(:), target_shield.points.x3(:), ones(size(target_shield.points.x1(:)))*25, target_shield.field(:))
-% axis equal tight
-
+% optionally plot shield target
+if plot_all == 1
+figure; scatter3(target_shield.points.x1(:), target_shield.points.x2(:), target_shield.points.x3(:), ones(size(target_shield.points.x1(:)))*25, target_shield.field(:))
+axis equal tight
+title('Shielding Target Points and Field');
+view([1 1 1])
+axis equal tight
+end
 
 x1 = [target_main.points.x1(:); target_shield.points.x1(:)];
 x2 = [target_main.points.x2(:); target_shield.points.x2(:)];
@@ -120,7 +130,8 @@ btarget = [target_main.field(:); target_shield.field(:)];
 ElementCurrents_temp = pinv(E_Mat)*btarget;
 
 
-%%
+%% Plot unregularized current distribution
+if plot_all == 1
 main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)-1);
 
 ElementCurrents(1).Stream = reshape(ElementCurrents_temp(1:main_stop,:),size(elm_angle)-[0 1]);
@@ -128,11 +139,11 @@ ElementCurrents(2).Stream = reshape(ElementCurrents_temp(main_stop+1:end,:),size
 
 figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 subplot(1,2,2)
-imab(ElementCurrents(1).Stream'); colorbar; title('a) coil currents Main');
+imab(ElementCurrents(1).Stream'); colorbar; title('a) main layer without regularization');
 subplot(1,2,1)
-imab(ElementCurrents(2).Stream'); colorbar; title('b) coil currents Shield');
+imab(ElementCurrents(2).Stream'); colorbar; title('b) shielding layer without regularization');
 
-
+end
 % PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
 %% Calculate the regularized Solution
 
@@ -140,7 +151,7 @@ ElementCurrents_temp=TikhonovReg(E_Mat, btarget, 0.0077); % regularisation autom
 
 
 %% Plot currents in 2D
-
+if plot_all == 1
 main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)-1);
 
 ElementCurrents(1).Stream = reshape(ElementCurrents_temp(1:main_stop,:),size(elm_angle)-[0 1]);
@@ -148,9 +159,9 @@ ElementCurrents(2).Stream = reshape(ElementCurrents_temp(main_stop+1:end,:),size
 
 figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 subplot(1,2,1)
-imab(ElementCurrents(1).Stream'); colorbar; title('coil currents Main');
+imab(ElementCurrents(1).Stream'); colorbar; title('a) regularized main layer');
 subplot(1,2,2)
-imab(ElementCurrents(2).Stream'); colorbar; title('coil currents Shield');
+imab(ElementCurrents(2).Stream'); colorbar; title('b) regularized shielding layer');
 
 
 PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
@@ -158,7 +169,7 @@ PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
 
 ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents, 13)
 
-
+end
 %% Plot multi layer contours
 
 
@@ -167,7 +178,7 @@ nP = 1;
 
 PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start + CoilDefinition(nP).thin_wire_nodes_stop)/2;
 
-n_cont = 15;
+n_cont = 13;
 
 ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];
 cont_max_main = max(max(ElmtsPlot));
@@ -177,7 +188,7 @@ nP = 2;
 
 PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start + CoilDefinition(nP).thin_wire_nodes_stop)/2;
 
-n_cont = 15;
+n_cont = 13;
 
 ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];
 cont_max_main = max(max(ElmtsPlot));
