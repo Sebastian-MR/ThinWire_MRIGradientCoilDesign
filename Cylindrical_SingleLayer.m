@@ -14,7 +14,7 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
-plot_all = 0; % set to 1, to optionally plot intermediate steps
+plot_all = 1; % set to 1, to optionally plot intermediate steps
 
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 1;
@@ -30,7 +30,7 @@ CoilDefinition(1).num_elements=size(elm_angle);
 elm_angle_shift = elm_angle([2:end,1],:);
 
 
-% Define Cylindrical Main Surface
+% Define Cylindrical Surface
 CoilDefinition(1).thin_wire_nodes_start = [cosd(elm_angle(:))*r_coil,sind(elm_angle(:))*r_coil,elm_z(:)];
 CoilDefinition(1).thin_wire_nodes_stop = [cosd(elm_angle_shift(:))*r_coil,sind(elm_angle_shift(:))*r_coil,elm_z(:)];
 
@@ -71,7 +71,7 @@ TargetDefinition.resol_radial = 3;
 TargetDefinition.resol_angular = 32;
 TargetDefinition.resol_length = 8;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'x';
+TargetDefinition.direction = 'z';
 
 target_points = Make_Target(TargetDefinition);
 
@@ -137,6 +137,6 @@ figure; imab(ElementCurrentsReg(1).Stream); colorbar; title('Regularized Stream 
 end
 
 % PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrentsReg)
-ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrentsReg, 19)
+ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrentsReg, 13)
 
 
