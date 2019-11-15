@@ -16,14 +16,14 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
-plot_all = 0; % set to 1, to optionally plot intermediate steps
+plot_all = 1; % set to 1, to optionally plot intermediate steps
 
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 2;
-segments_angular=48;
+segments_angular=56;
 segments_angular_shield = segments_angular;
 half_length=0.75; % 500mm
-len_step = 0.025; % 20mm
+len_step = 0.025*2; % 20mm
 r_coil = 0.4;  % 700mm coil diameter
 r_shield = 0.5;
 
@@ -33,10 +33,12 @@ CoilDefinition(1).num_elements=size(elm_angle);
 elm_angle_shift = elm_angle([2:end,1],:);
 
 % Define Cylindrical Main Surface
-CoilDefinition(1).thin_wire_nodes_start = [cosd(elm_angle(:)-arc_angle/2)*r_coil,sind(elm_angle(:)-arc_angle/2)*r_coil,elm_z(:)];
-CoilDefinition(1).thin_wire_nodes_stop = [cosd(elm_angle(:)+arc_angle/2)*r_coil,sind(elm_angle(:)+arc_angle/2)*r_coil,elm_z(:)];
+
+CoilDefinition(1).thin_wire_nodes_start = [cosd(elm_angle(:))*r_coil,sind(elm_angle(:))*r_coil,elm_z(:)];
+CoilDefinition(1).thin_wire_nodes_stop = [cosd(elm_angle_shift(:))*r_coil,sind(elm_angle_shift(:))*r_coil,elm_z(:)];
 
 CoilDefinition(1).num_elements = size(elm_angle);
+
 
 
 % Define Shielding Surface
@@ -45,8 +47,8 @@ arc_angle = 360/(segments_angular_shield);
 CoilDefinition(2).num_elements=size(elm_angle_shield);
 elm_angle_shift = elm_angle_shield([2:end,1],:);
 
-CoilDefinition(2).thin_wire_nodes_start = [cosd(elm_angle(:)-arc_angle/2)*r_shield,sind(elm_angle(:)-arc_angle/2)*r_shield,elm_z(:)];
-CoilDefinition(2).thin_wire_nodes_stop = [cosd(elm_angle(:)+arc_angle/2)*r_shield,sind(elm_angle(:)+arc_angle/2)*r_shield,elm_z(:)];
+CoilDefinition(2).thin_wire_nodes_start = [cosd(elm_angle(:))*r_shield,sind(elm_angle(:))*r_shield,elm_z(:)];
+CoilDefinition(2).thin_wire_nodes_stop = [cosd(elm_angle_shift(:))*r_shield,sind(elm_angle_shift(:))*r_shield,elm_z(:)];
 CoilDefinition(2).num_elements=size(elm_angle_shield);
 
 CoilDefinition(2).num_elements = size(elm_angle_shield);
@@ -60,15 +62,37 @@ CoilDefinition(2).Radius = r_shield;
 CoilDefinition(1).Length = half_length*2;
 CoilDefinition(2).Length = half_length*2;
 
+
+
+
+% possibility to plot thin wire elements
+if plot_all == 1
+figure;
+hold all
+for np=1:2
+for n = 1:length(CoilDefinition(np).thin_wire_nodes_start)
+plot3([CoilDefinition(np).thin_wire_nodes_start(n,1) CoilDefinition(np).thin_wire_nodes_stop(n,1)], ...
+    [CoilDefinition(np).thin_wire_nodes_start(n,2) CoilDefinition(np).thin_wire_nodes_stop(n,2)],...
+    [CoilDefinition(np).thin_wire_nodes_start(n,3) CoilDefinition(np).thin_wire_nodes_stop(n,3)])
+    
+end
+end
+hold off
+axis equal tight
+title('Thin-wire current elements');
+view([1 1 1])
+end
+
+
 %% Definition of target points in a 3D-volume
 
 % define main target
 TargetDefinition.shape = 'sphere';
-TargetDefinition.radius = 0.2;
-TargetDefinition.resol_radial = 3;
-TargetDefinition.resol_angular = 17;
+TargetDefinition.radius = 0.15;
+TargetDefinition.resol_radial = 2;
+TargetDefinition.resol_angular = 24;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'y';
+TargetDefinition.direction = 'z';
 
 target_main = Make_Target(TargetDefinition);
 
@@ -127,36 +151,38 @@ Sensitivity = ThinWireSensitivity(CoilDefinition, Target);
 E_Mat = [Sensitivity(1).ElementFieldsStream Sensitivity(2).ElementFieldsStream];
 btarget = [target_main.field(:); target_shield.field(:)];
 
-ElementCurrents_temp = pinv(E_Mat)*btarget;
+ElementCurrents_unreg = pinv(E_Mat)*btarget;
 
 
 %% Plot unregularized current distribution
-if plot_all == 1
+
 main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)-1);
 
-ElementCurrents(1).Stream = reshape(ElementCurrents_temp(1:main_stop,:),size(elm_angle)-[0 1]);
-ElementCurrents(2).Stream = reshape(ElementCurrents_temp(main_stop+1:end,:),size(elm_angle)-[0 1]);
+ElementCurrents(1).Stream = reshape(ElementCurrents_unreg(1:main_stop,:),size(elm_angle)-[0 1]);
+ElementCurrents(2).Stream = reshape(ElementCurrents_unreg(main_stop+1:end,:),size(elm_angle)-[0 1]);
 
+if plot_all == 1
 figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 subplot(1,2,2)
-imab(ElementCurrents(1).Stream'); colorbar; title('a) main layer without regularization');
+imab(ElementCurrents(1).Stream); colorbar; title('a) main layer without regularization');
 subplot(1,2,1)
-imab(ElementCurrents(2).Stream'); colorbar; title('b) shielding layer without regularization');
+imab(ElementCurrents(2).Stream); colorbar; title('b) shielding layer without regularization');
 
 end
 % PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
 %% Calculate the regularized Solution
 
-ElementCurrents_temp=TikhonovReg(E_Mat, btarget, 0.0077); % regularisation automatically penelizes total power
+ElementCurrents_reg=TikhonovReg(E_Mat, btarget, 0.0077); % regularisation automatically penelizes total power
 
 
 %% Plot currents in 2D
-if plot_all == 1
+
 main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)-1);
 
-ElementCurrents(1).Stream = reshape(ElementCurrents_temp(1:main_stop,:),size(elm_angle)-[0 1]);
-ElementCurrents(2).Stream = reshape(ElementCurrents_temp(main_stop+1:end,:),size(elm_angle)-[0 1]);
+ElementCurrents(1).Stream = reshape(ElementCurrents_reg(1:main_stop,:),size(elm_angle)-[0 1]);
+ElementCurrents(2).Stream = reshape(ElementCurrents_reg(main_stop+1:end,:),size(elm_angle)-[0 1]);
 
+if plot_all == 1
 figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 subplot(1,2,1)
 imab(ElementCurrents(1).Stream'); colorbar; title('a) regularized main layer');
@@ -204,8 +230,8 @@ S = contourdata(C1);
 ccount = size(S);
 nP =1;
 for i = 1:ccount(2)
-    sx=CoilDefinition(nP).Radius*cos(S(i).xdata/(CoilDefinition(nP).num_elements(1)-1)*2*pi);
-    sy=CoilDefinition(nP).Radius.*sin(S(i).xdata/(CoilDefinition(nP).num_elements(1)-1)*2*pi);
+    sx=CoilDefinition(nP).Radius*cos(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
+    sy=CoilDefinition(nP).Radius.*sin(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
     sz=S(i).ydata./length(ElmtsPlot(1,:)')*CoilDefinition(nP).Length - CoilDefinition(nP).Length/2;
     
     plot3(sx,sy,sz,'b','LineWidth', 1)
@@ -215,8 +241,8 @@ S = contourdata(C2);
 ccount = size(S);
 nP =2;
 for i = 1:ccount(2)
-    sx=CoilDefinition(nP).Radius*cos(S(i).xdata/(CoilDefinition(nP).num_elements(1)-1)*2*pi);
-    sy=CoilDefinition(nP).Radius.*sin(S(i).xdata/(CoilDefinition(nP).num_elements(1)-1)*2*pi);
+    sx=CoilDefinition(nP).Radius*cos(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
+    sy=CoilDefinition(nP).Radius.*sin(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
     sz=S(i).ydata./length(ElmtsPlot(1,:)')*CoilDefinition(nP).Length - CoilDefinition(nP).Length/2;
     
     plot3(sx,sy,sz,'r','LineWidth', 1)
