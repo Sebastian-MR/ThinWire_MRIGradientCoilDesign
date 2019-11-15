@@ -14,7 +14,7 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
-plot_all = 1; % set to 1, to optionally plot intermediate steps
+plot_all = 0; % set to 1, to optionally plot intermediate steps
 
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 1;
@@ -71,7 +71,7 @@ TargetDefinition.resol_radial = 3;
 TargetDefinition.resol_angular = 32;
 TargetDefinition.resol_length = 8;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'z';
+TargetDefinition.direction = 'y';
 
 target_points = Make_Target(TargetDefinition);
 
