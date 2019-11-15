@@ -214,3 +214,59 @@ set(gca,'fontsize',font_size)
 title('Stream function in 3D representation');
 
 
+%%
+
+n_cont = 13;
+
+cont_max_main = max(max(Stream));
+[C1,H1] = contour(Stream(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
+
+%% 3D Plot of the contours
+
+figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
+hold all
+
+S = contourdata(C1);
+ccount = size(S);
+nP =1;
+for i = 1:ccount(2)
+    sxp=r_coil*cos(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
+    syp=r_coil.*sin(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
+    szp=S(i).ydata./length(Stream(1,:)')*CoilDefinition(nP).Length - CoilDefinition(nP).Length/2;
+    
+    plot3(sxp,syp,szp,'b','LineWidth', 1)
+end
+
+hold off
+view([-7 25]);
+
+axis tight equal
+font_size = 12;
+set(gca,'fontsize',font_size)
+
+
+
+%% 3D Plot of the contours and stream function
+
+
+figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
+hold all
+
+S = contourdata(C1);
+ccount = size(S);
+nP =1;
+for i = 1:ccount(2)
+    sxp=r_coil*cos(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
+    syp=r_coil.*sin(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
+    szp=S(i).ydata./length(Stream(1,:)')*CoilDefinition(nP).Length - CoilDefinition(nP).Length/2;
+    
+    plot3(sxp,syp,szp,'k','LineWidth', 2)
+end
+surf(sx_ph,sy_ph,sz_ph,Stream_p,'EdgeColor','none');
+hold off
+view([-7 25]);
+
+axis tight equal off
+font_size = 12;
+set(gca,'fontsize',font_size)
+
