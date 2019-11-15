@@ -16,7 +16,7 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
-plot_all = 1; % set to 1, to optionally plot intermediate steps
+plot_all = 0; % set to 1, to optionally plot intermediate steps
 
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 2;
@@ -28,7 +28,7 @@ r_coil = 0.4;  % 700mm coil diameter
 r_shield = 0.5;
 
 arc_angle = 360/(segments_angular);
-[elm_angle, elm_z] = ndgrid((0.5:segments_angular+0.5)*arc_angle, (-half_length:len_step:half_length)); 
+[elm_angle, elm_z] = ndgrid((0:segments_angular-1)*arc_angle, (-half_length:len_step:half_length)); 
 CoilDefinition(1).num_elements=size(elm_angle);
 elm_angle_shift = elm_angle([2:end,1],:);
 
@@ -41,7 +41,7 @@ CoilDefinition(1).num_elements = size(elm_angle);
 
 % Define Shielding Surface
 arc_angle = 360/(segments_angular_shield);
-[elm_angle_shield, elm_z] = ndgrid((0.5:segments_angular_shield+0.5)*arc_angle, (-half_length:len_step:half_length));
+[elm_angle_shield, elm_z] = ndgrid((0:segments_angular_shield-1)*arc_angle, (-half_length:len_step:half_length));
 CoilDefinition(2).num_elements=size(elm_angle_shield);
 elm_angle_shift = elm_angle_shield([2:end,1],:);
 
