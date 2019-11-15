@@ -13,4 +13,8 @@ for arbitrary surfaces (yet).
 
 The code is designed in MATLAB, however most parts run in Octave, as well.
 
+An explanatory introduction is given in ThinWire_Demo.m. Two basic coils
+are described in the scripts Cylindrical_SingleLayer.m and 
+CylindricalShielded.m.
+
 Sebastian Littin
