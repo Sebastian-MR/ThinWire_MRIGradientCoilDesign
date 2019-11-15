@@ -113,8 +113,9 @@ xlabel('circumferential [rad]')
 % realizable with closed loops...
 
 ElementCurrents=TikhonovReg(Sensitivity.ElementFields, btarget, 0.0077); % regularisation automatically penelizes total power
-figure; imab(reshape(ElementCurrents,size(elm_angle))); colorbar; title('Regularized current distribution');
-
+figure; imab(reshape(ElementCurrents,size(elm_angle))); title('Regularized current distribution');
+ylabel('z-Axis [m]')
+xlabel('circumferential [rad]')
 
 %% Add additional constraints to the regularisation
 % add conditions for balancing along each angular column
@@ -130,7 +131,7 @@ ElementFields_Balance = [Sensitivity.ElementFields; ElementFields_Add*5e-4]; % t
 TargetField_Balance = [btarget; TargetFields_Add];
 
 % Do regularization
-ElementCurrents_Balance = TikhonovReg(ElementFields_Balance, TargetField_Balance, 0.00005); % << ~5% deviation, this time regularization is very different and depends on the above coefficient
+ElementCurrents_Balance = TikhonovReg(ElementFields_Balance, TargetField_Balance, 0.00005); % this time regularization is very different and depends on the above coefficient
 
 % Calculate resulting field
 ResultingField_Balance = Sensitivity.ElementFields*ElementCurrents_Balance;
@@ -191,7 +192,8 @@ sz_p(:,1:end-1) = sz./2+sz_p(:,1:end-1);
 sz_p(:,1) = sz_p(:,1)*2;
 sz_p(:,end) = sz_p(:,end)*2;
  
-% tiny Hack to plot all radial elements
+% tiny Hack to plot all radial elements, because surf does not plot all
+% elements...
 sx_ph = [sx_p; sx_p(1,:)];
 sy_ph = [sy_p; sy_p(1,:)];
 sz_ph = [sz_p; sz_p(1,:)];
@@ -210,43 +212,5 @@ axis tight equal
 font_size = 12;
 set(gca,'fontsize',font_size)
 title('Stream function in 3D representation');
-
-%%
-
-return
-
-
-
-
-
-
-% 3d plot of the current distribution
-
-
-[plot_angle, plot_z] = ndgrid((-0.5:segments_angular-1.5)*arc_angle, (-half_length-len_step/2:len_step:half_length+len_step/2));
-
-zRot=-0; % rotate to make better visual impression
-
-sx=r_coil*cos((plot_angle+zRot)/180*pi);
-sy=r_coil*sin((plot_angle+zRot)/180*pi);
-sz=plot_z;
-
-
-
-figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
-hold all
-surf(sx,sy,sz,reshape(Stream,size(plot_angle)),'EdgeColor','none');
-hold off
-xlabel('x-Axis [m]');
-ylabel('y-Axis [m]');
-zlabel('z-Axis [m]');
-view([-7 25]);
-
-axis tight equal
-font_size = 12;
-set(gca,'fontsize',font_size)
-
-
-return
 
 
