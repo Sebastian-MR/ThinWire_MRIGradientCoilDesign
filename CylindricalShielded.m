@@ -16,7 +16,7 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
-plot_all = 1; % set to 1, to optionally plot intermediate steps
+plot_all = 0; % set to 1, to optionally plot intermediate steps
 
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 2;
