@@ -209,7 +209,7 @@ n_cont = 13;
 ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];
 % Add two radial columns to not miss iso-contours at radial
 % interconnections
-ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
+ElmtsPlot = [ElmtsPlot; ElmtsPlot(1,:)];
 cont_max_main = max(max(ElmtsPlot));
 [C1,H1] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
 
@@ -221,7 +221,7 @@ n_cont = 13;
 
 ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];% Add two radial columns to not miss iso-contours at radial
 % interconnections
-ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
+ElmtsPlot = [ElmtsPlot; ElmtsPlot(1,:)];
 cont_max_main = max(max(ElmtsPlot));
 [C2,H2] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
 
