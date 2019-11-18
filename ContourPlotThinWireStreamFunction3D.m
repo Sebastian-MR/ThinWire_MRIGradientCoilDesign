@@ -31,7 +31,7 @@ for nP = 1:CoilDefinition(1).Partitions
 % Add two radial columns to not miss iso-contours at radial
 % interconnections
     ElmtsPlot = reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]));
-    ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
+    ElmtsPlot = [ElmtsPlot; ElmtsPlot(1,:)];
     
     
     figure; set(gcf,'Name','Stream Function','Position',[   1   1   500   500]);
