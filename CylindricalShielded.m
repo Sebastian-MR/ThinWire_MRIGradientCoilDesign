@@ -92,7 +92,7 @@ TargetDefinition.radius = 0.15;
 TargetDefinition.resol_radial = 2;
 TargetDefinition.resol_angular = 24;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'y';
+TargetDefinition.direction = 'x';
 
 target_main = Make_Target(TargetDefinition);
 
@@ -207,6 +207,9 @@ PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start + CoilDefinition(nP).thin_
 n_cont = 13;
 
 ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];
+% Add two radial columns to not miss iso-contours at radial
+% interconnections
+ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
 cont_max_main = max(max(ElmtsPlot));
 [C1,H1] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
 
@@ -216,7 +219,9 @@ PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start + CoilDefinition(nP).thin_
 
 n_cont = 13;
 
-ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];
+ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];% Add two radial columns to not miss iso-contours at radial
+% interconnections
+ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
 cont_max_main = max(max(ElmtsPlot));
 [C2,H2] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
 

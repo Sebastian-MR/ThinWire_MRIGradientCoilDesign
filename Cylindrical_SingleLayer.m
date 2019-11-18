@@ -71,7 +71,7 @@ TargetDefinition.resol_radial = 3;
 TargetDefinition.resol_angular = 32;
 TargetDefinition.resol_length = 8;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'y';
+TargetDefinition.direction = 'x';
 
 target_points = Make_Target(TargetDefinition);
 
