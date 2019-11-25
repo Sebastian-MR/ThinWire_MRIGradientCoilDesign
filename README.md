@@ -11,7 +11,8 @@ derive a ralizable coil design.
 This method may be used for simple geometries. However, no generalization
 for arbitrary surfaces (yet).
 
-The code is designed in MATLAB, however most parts run in Octave, as well.
+The code is written in MATLAB. However, no special toolboxes are used to 
+make it compatible with Octave.
 
 An explanatory introduction is given in ThinWire_Demo.m. Two basic coils
 are described in the scripts Cylindrical_SingleLayer.m and 
