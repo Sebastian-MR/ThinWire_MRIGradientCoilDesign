@@ -17,14 +17,14 @@ close all
 %% coil description: Cylindrical unshielded coil
 % 
 
-plot_all = 1; % set to 1, to optionally plot intermediate steps
+plot_all = 0; % set to 1, to optionally plot intermediate steps
 CoilDefinition.Partitions = 2;
 
-half_length_z=0.4;
-len_step_z = 0.015;
-half_length_x=0.35;
-len_step_x = 0.015;
-y_offset = 0.3;
+half_length_z=0.3; % 700mm => length-z 1.4m
+len_step_z = 0.01; % 50mm => step-length-z 5cm
+half_length_x=0.3; % 225mm => length-x 0.45m
+len_step_x = 0.01; % 100mm => step-length-z 4.5cm
+y_offset = 0.4/2;
 
 
 
@@ -78,7 +78,7 @@ end
 TargetDefinition.shape = 'sphere';
 TargetDefinition.radius = 0.15;
 TargetDefinition.resol_radial = 2;
-TargetDefinition.resol_angular = 24;
+TargetDefinition.resol_angular = 64;
 TargetDefinition.strength = 5e-3;
 TargetDefinition.direction = 'z';
 
@@ -115,55 +115,6 @@ CoilDefinition(2).StreamDirection = 2;
 
 Sensitivity = ThinWireSensitivity(CoilDefinition, Target);
 
-% %% Calculate the unregularized Solution
-% 
-% E_Mat = [Sensitivity(1).ElementFieldsStream Sensitivity(2).ElementFieldsStream];
-% btarget = [target_main.field(:)];%; target_shield.field(:)];
-% 
-% ElementCurrents_unreg = pinv(E_Mat)*btarget;
-% 
-% 
-% %% Plot unregularized current distribution
-% 
-% main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)-1);
-% 
-% ElementCurrents(1).Stream = reshape(ElementCurrents_unreg(1:main_stop,:),num_elements-[0 1]);
-% ElementCurrents(2).Stream = reshape(ElementCurrents_unreg(main_stop+1:end,:),num_elements-[0 1]);
-% 
-% if plot_all == 1
-% figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
-% subplot(1,2,1)
-% imab(ElementCurrents(1).Stream); colorbar; title('a) main layer without regularization');
-% subplot(1,2,2)
-% imab(ElementCurrents(2).Stream); colorbar; title('b) shielding layer without regularization');
-% 
-% end
-% % PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
-% %% Calculate the regularized Solution
-% % define Tikhonov Matrix
-% E_Mat = [Sensitivity(1).ElementFieldsStream Sensitivity(2).ElementFieldsStream];
-% btarget = [target_main.field(:)];
-% 
-% W = eye(size(Sensitivity(1).ElementFieldsStream,2));
-% % W = eye(size(E_Mat,2));
-% 
-% w = W - circshift(W,num_elements(1),1);
-% w(1:2*num_elements(1),end-2*num_elements(1)+1:end) = zeros(2*num_elements(1));
-% 
-% w_red = w(:,1:end-num_elements(1))';
-% % w_red = w(1:end-num_elements(1),:);
-% 
-% z = zeros(size(w));
-% z = zeros(size(w_red));
-% 
-% Reg_mat = [w_red z; z w_red];
-% % Reg_mat = [w z; z w];
-% % Reg_mat = w;
-% 
-% tic
-% ElementCurrents_Reg_Weigh=TikhonovReg_Weigh(E_Mat, btarget, 5e-2, Reg_mat); 
-% toc
-% 
 
 %% Add additional constraints to enforce peripheral elements to be 0
 
@@ -173,7 +124,7 @@ btarget = [target_main.field(:)];
 % btarget = target_points.field;
 
 lambda1 = 1e2;
-lambda2 = 1e1;
+lambda2 = 1e2;
 
 % E_Mat = Sensitivity(1).ElementFieldsStream(:,:);
 W = eye(size(Sensitivity(1).ElementFieldsStream ,2));
@@ -189,17 +140,17 @@ w_ext = [w; [lambda1*eye(num_elements(1)) zeros(num_elements(1),size(Sensitivity
 w_ext2 = zeros(1,size(w,2));
 w_ext2(1,1) = lambda2;
 
+w_extend_l = zeros(num_elements(2)-1,size(w,2));
+
 for n_ex = 1:num_elements(2)-1
-w_extend_l(n_ex,:) = circshift(w_ext2,n_ex*(num_elements(1))); 
+w_extend_l(n_ex,:) = circshift(w_ext2,n_ex*(num_elements(1)),2); 
 end
 w_extend_r = circshift(w_extend_l,num_elements(1)-1,2);
 
 w_full = [w_ext  zeros(size(w_ext)); zeros(size(w_ext)) w_ext; w_extend_l zeros(size(w_extend_l));...
     w_extend_r zeros(size(w_extend_r)); zeros(size(w_extend_r)) w_extend_l; zeros(size(w_extend_r)) w_extend_r];
-   
 
-
-ElementCurrents_Reg_Weigh = TikhonovReg_Weigh(E_Mat, btarget, 5e-1, w_full); 
+ElementCurrents_Reg_Weigh = TikhonovReg_Weigh(E_Mat, btarget, 15e-1, w_full); 
 
 % figure; imagesc(w_extend_r);
 
@@ -216,12 +167,12 @@ main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)
 ElementCurrents(1).Stream = reshape(ElementCurrents_Reg_Weigh(1:main_stop,:),num_elements-[0 1]);
 ElementCurrents(2).Stream = reshape(ElementCurrents_Reg_Weigh(main_stop+1:end,:),num_elements-[0 1]);
 
-% figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
+%figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 hold all
 for nP =1:2
 
-cont_max = max(max(ElementCurrents(nP).Stream))*1;%0.98;
-cont_min = min(min(ElementCurrents(nP).Stream))*1;%0.98;    
+cont_max = max(max(ElementCurrents(nP).Stream))*0.9;
+cont_min = min(min(ElementCurrents(nP).Stream))*0.9;    
     
     figure;  %set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 ElmtsPlot = reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]));
@@ -244,10 +195,6 @@ hold all
 for nP = 1:CoilDefinition(1).Partitions
 
 PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start);% + CoilDefinition(nP).thin_wire_nodes_stop)/2;
-
-% sx = PlotCoord(:,1);
-% sy = PlotCoord(:,2);
-% sz = PlotCoord(:,3);
 
 sx = reshape(PlotCoord(:,1),CoilDefinition(nP).num_elements);
 sy = reshape(PlotCoord(:,2),CoilDefinition(nP).num_elements);
@@ -278,69 +225,4 @@ set(gca,'fontsize',font_size)
 end
 hold off
 
-% ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents, 13)
 
-% end
-%% Plot multi layer contours
-
-
-
-nP = 1;
-
-PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start + CoilDefinition(nP).thin_wire_nodes_stop)/2;
-
-n_cont = 15;
-
-ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];
-% Add two radial columns to not miss iso-contours at radial
-% interconnections
-ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
-cont_max_main = max(max(ElmtsPlot));
-[C1,H1] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
-
-nP = 2;
-
-PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start + CoilDefinition(nP).thin_wire_nodes_stop)/2;
-
-n_cont = 13;
-
-ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];% Add two radial columns to not miss iso-contours at radial
-% interconnections
-ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
-% cont_max_main = max(max(ElmtsPlot));
-[C2,H2] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
-
-
-%% 3D Plot of the contours
-
-figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
-hold all
-
-S = contourdata(C1);
-ccount = size(S);
-nP =1;
-for i = 1:ccount(2)
-    sx=CoilDefinition(nP).Length(1)*S(i).xdata;
-    sy=CoilDefinition(nP).Length(2)*S(i).xdata;
-    sz=S(i).ydata./length(ElmtsPlot(1,:)')*CoilDefinition(nP).Length - CoilDefinition(nP).Length/2;
-    
-    plot3(sx,sy,sz,'b','LineWidth', 1)
-end
-%%
-S = contourdata(C2);
-ccount = size(S);
-nP =2;
-for i = 1:ccount(2)
-    sx=CoilDefinition(nP).Radius*cos(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
-    sy=CoilDefinition(nP).Radius.*sin(S(i).xdata/(CoilDefinition(nP).num_elements(1))*2*pi);
-    sz=S(i).ydata./length(ElmtsPlot(1,:)')*CoilDefinition(nP).Length - CoilDefinition(nP).Length/2;
-    
-    plot3(sx,sy,sz,'r','LineWidth', 1)
-end
-
-hold off
-view([-97 25]);
-
-axis tight equal off
-font_size = 12;
-set(gca,'fontsize',font_size)
