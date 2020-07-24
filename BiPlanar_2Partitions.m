@@ -17,13 +17,13 @@ close all
 %% coil description: Cylindrical unshielded coil
 % 
 
-plot_all = 0; % set to 1, to optionally plot intermediate steps
+plot_all = 1; % set to 1, to optionally plot intermediate steps
 CoilDefinition.Partitions = 2;
 
-half_length_z=0.3; % 700mm => length-z 1.4m
-len_step_z = 0.01; % 50mm => step-length-z 5cm
-half_length_x=0.3; % 225mm => length-x 0.45m
-len_step_x = 0.01; % 100mm => step-length-z 4.5cm
+half_length_z=0.3; % 600mm => length-z 0.6m
+len_step_z = 0.01; % 10mm => step-length-z 1cm
+half_length_x=0.3; % 500mm => length-x 0.6m
+len_step_x = 0.01; % 10mm => step-length-x 1cm
 y_offset = 0.4/2;
 
 
@@ -80,7 +80,7 @@ TargetDefinition.radius = 0.15;
 TargetDefinition.resol_radial = 2;
 TargetDefinition.resol_angular = 64;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'z';
+TargetDefinition.direction = 'z'; % Direction of constant targe gradient
 
 target_main = Make_Target(TargetDefinition);
 
@@ -167,17 +167,17 @@ main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)
 ElementCurrents(1).Stream = reshape(ElementCurrents_Reg_Weigh(1:main_stop,:),num_elements-[0 1]);
 ElementCurrents(2).Stream = reshape(ElementCurrents_Reg_Weigh(main_stop+1:end,:),num_elements-[0 1]);
 
-%figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
+figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 hold all
 for nP =1:2
 
 cont_max = max(max(ElementCurrents(nP).Stream))*0.9;
 cont_min = min(min(ElementCurrents(nP).Stream))*0.9;    
     
-    figure;  %set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
+% figure;  %set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
 ElmtsPlot = reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]));
 ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
-% subplot(1,2,nP)
+subplot(1,2,nP)
 hold all
 imab(ElementCurrents(nP).Stream); %colorbar; %title('a) regularized main layer');
 [C,H] = contour(ElementCurrents(nP).Stream' ,[cont_min:((abs(cont_max)+abs(cont_min))/n_cont):cont_max],'k','LineWidth', 2);
