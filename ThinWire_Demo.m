@@ -21,9 +21,9 @@ close all
 
 CoilDefinition.Partitions = 1;
 segments_angular=56;
-half_length=0.6; % 500mm
+half_length=0.6; % 600mm
 len_step = 0.02; % 20mm
-r_coil = 0.3;  % 700mm coil diameter
+r_coil = 0.4;  % 800mm coil diameter
 
 arc_angle = 360/(segments_angular);
 [elm_angle, elm_z] = ndgrid((0:segments_angular-1)*arc_angle, (-half_length:len_step:half_length));
@@ -40,11 +40,9 @@ CoilDefinition(1).num_elements = size(elm_angle);
 %% Definition of target points in a 3D-volume
 
 TargetDefinition.shape = 'sphere';
-TargetDefinition.radius = 0.15;
-% TargetDefinition.length = 0.25;
+TargetDefinition.radius = 0.2;
 TargetDefinition.resol_radial = 3;
 TargetDefinition.resol_angular = 15;
-% TargetDefinition.resolution = 12;
 TargetDefinition.strength = 5e-3;
 TargetDefinition.direction = 'y';
 
@@ -102,10 +100,11 @@ ElementCurrents = pinv(Sensitivity.ElementFields)*btarget;
 ResultingField = Sensitivity.ElementFields*ElementCurrents;
 
 
-figure; set(gcf,'Name','Currents unreg','Position',[   1   1   500   500]);
-imab(reshape(ElementCurrents,size(elm_angle)));title('Unregularized current distribution');
-ylabel('z-Axis [m]')
-xlabel('circumferential [rad]')
+figure; set(gcf,'Name','Unregularized Currents','Position',[   1   1   500   500]);
+imab(reshape(ElementCurrents,size(elm_angle)));
+ title('Unregularized current distribution');
+ ylabel('z-Axis [m]')
+ xlabel('circumferential [rad]')
 
 
 %% Calculate simple Tikhonov-regularized solution
@@ -113,9 +112,33 @@ xlabel('circumferential [rad]')
 % realizable with closed loops...
 
 ElementCurrents=TikhonovReg(Sensitivity.ElementFields, btarget, 0.0077); % regularisation automatically penelizes total power
-figure; imab(reshape(ElementCurrents,size(elm_angle))); title('Regularized current distribution');
-ylabel('z-Axis [m]')
-xlabel('circumferential [rad]')
+figure; set(gcf,'Name','Tikhonov regularized','Position',[   1   1   500   500]);
+imab(reshape(ElementCurrents,size(elm_angle)));
+ title('Regularized current distribution');
+ ylabel('z-Axis [m]')
+ xlabel('circumferential [rad]')
+
+%% Plot the stream function and stream lines in 2D...
+
+ElementCurrents_Balance_reshape = reshape(ElementCurrents,size(elm_angle));
+
+Stream_Reg=cumsum(ElementCurrents_Balance_reshape(:,end:-1:1),2);
+Stream_Reg_rev=cumsum(ElementCurrents_Balance_reshape,2);
+
+Stream = zeros(size(Stream_Reg)+[0 1]);
+Stream(:,2:end) = Stream_Reg./2;
+Stream(:,1:end-1) = Stream(:,1:end-1)-Stream_Reg_rev(:,end:-1:1)./2;
+
+figure; set(gcf,'Name','Regularized Stream Function','Position',[   1   1   500   500]);
+hold all
+imab(Stream);
+cont_max = max(max(Stream))*0.98;
+n_cont = 15;
+[C,H] = contour(Stream(:,:)',[-cont_max:(2*cont_max/n_cont):cont_max],'k','LineWidth', 2);
+hold off
+ title('Stream function from integrating the currents');
+ ylabel('z-Axis [m]')
+ xlabel('circumferential [rad]')
 
 %% Add additional constraints to the regularisation
 % add conditions for balancing along each angular column
@@ -136,11 +159,12 @@ ElementCurrents_Balance = TikhonovReg(ElementFields_Balance, TargetField_Balance
 % Calculate resulting field
 ResultingField_Balance = Sensitivity.ElementFields*ElementCurrents_Balance;
 
-figure; set(gcf,'Name','Currents reg','Position',[   1   1   500   500]);ElementFields_Balance = [Sensitivity.ElementFields; ElementFields_Add*5e-4]; % this coefficient controls the relative importance of the new equations
+figure; set(gcf,'Name','Regularized currents with constraints','Position',[   1   1   500   500]);
 TargetField_Balance = [btarget; TargetFields_Add];
-imab(reshape(ElementCurrents_Balance,size(elm_angle)));title('Regularized currents with balance');
-ylabel('z-Axis [m]')
-xlabel('circumferential [rad]')
+imab(reshape(ElementCurrents_Balance,size(elm_angle)));
+ title('Regularized currents with balance');
+ ylabel('z-Axis [m]')
+ xlabel('circumferential [rad]')
 
 ElementCurrents_Balance_reshape = reshape(ElementCurrents_Balance,size(elm_angle));
 %%
@@ -160,18 +184,17 @@ Stream(:,1:end-1) = Stream(:,1:end-1)-Stream_Reg_rev(:,end:-1:1)./2;
 
 %% Plot the stream function and stream lines in 2D...
 
-figure; set(gcf,'Name','Stream Function','Position',[   1   1   500   500]);
+figure; set(gcf,'Name','Regularized Stream Function','Position',[   1   1   500   500]);
 
 hold all
 imab(Stream);
-cont_max = 4500;
+cont_max = max(max(Stream))*0.98;%4500;
 n_cont = 15;
 [C,H] = contour(Stream(:,:)',[-cont_max:(2*cont_max/n_cont):cont_max],'k','LineWidth', 2);
-title('Stream function from integrating the currents');
 hold off
-
-ylabel('z-Axis [m]')
-xlabel('circumferential [rad]')
+ title('Stream function from integrating the currents');
+ ylabel('z-Axis [m]')
+ xlabel('circumferential [rad]')
 
 
 %% 3D Plot of the stream function
@@ -199,7 +222,7 @@ sy_ph = [sy_p; sy_p(1,:)];
 sz_ph = [sz_p; sz_p(1,:)];
 Stream_p = [Stream; Stream(1,:)];
 
-figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
+figure; set(gcf,'Name','3D Stream function','Position',[   1   1   500   500]);
 hold all
 surf(sx_ph,sy_ph,sz_ph,Stream_p,'EdgeColor','none');
 hold off
@@ -218,12 +241,12 @@ title('Stream function in 3D representation');
 
 n_cont = 13;
 
-cont_max_main = max(max(Stream));
+cont_max_main = max(max(Stream))-500;
 [C1,H1] = contour(Stream(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
 
 %% 3D Plot of the contours
 
-figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
+figure; set(gcf,'Name','3D contours','Position',[   1   1   500   500]);
 hold all
 
 S = contourdata(C1);
@@ -249,7 +272,7 @@ set(gca,'fontsize',font_size)
 %% 3D Plot of the contours and stream function
 
 
-figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   1000]);
+figure; set(gcf,'Name','3D coil','Position',[   1   1   500   500]);
 hold all
 
 S = contourdata(C1);
