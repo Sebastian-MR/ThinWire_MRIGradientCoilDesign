@@ -16,15 +16,15 @@ close all
 
 %% coil description: Cylindrical unshielded coil
 
-plot_all = 0; % set to 1, to optionally plot intermediate steps
+plot_all = 1; % set to 1, to optionally plot intermediate steps
 
 % define coil-parameters of the matrix coil: segments_angular, half_length, len_step
 CoilDefinition.Partitions = 2;
-segments_angular=56;
+segments_angular=48;
 segments_angular_shield = segments_angular;
-half_length=0.75; % 500mm
-len_step = 0.025*2; % 20mm
-r_coil = 0.4;  % 700mm coil diameter
+half_length=0.6; % 600mm
+len_step = 0.015; % 15mm
+r_coil = 0.4;  % 400mm coil diameter
 r_shield = 0.5;
 
 arc_angle = 360/(segments_angular);
@@ -52,7 +52,6 @@ CoilDefinition(2).thin_wire_nodes_stop = [cosd(elm_angle_shift(:))*r_shield,sind
 CoilDefinition(2).num_elements=size(elm_angle_shield);
 
 CoilDefinition(2).num_elements = size(elm_angle_shield);
-% plot_z =  [cosd(elm_angle(:))*r_coil,sind(elm_angle(:))*r_coil,(-half_length-len_step/2:len_step:half_length+len_step/2)];
 
 
 % Some additional definitions for 3D contour plots
@@ -92,7 +91,7 @@ TargetDefinition.radius = 0.15;
 TargetDefinition.resol_radial = 2;
 TargetDefinition.resol_angular = 24;
 TargetDefinition.strength = 5e-3;
-TargetDefinition.direction = 'x';
+TargetDefinition.direction = 'y';
 
 target_main = Make_Target(TargetDefinition);
 
@@ -140,7 +139,7 @@ num_points_main=length(target_main.points.x1);
 num_points_shield=length(target_shield.points.x1);
 
 
-%% Calculate regularized Thin-wire solution
+%% Calculate Sensitivity
 CoilDefinition(1).StreamDirection = 2;
 CoilDefinition(2).StreamDirection = 2;
 
@@ -163,53 +162,97 @@ ElementCurrents(2).Stream = reshape(ElementCurrents_unreg(main_stop+1:end,:),siz
 
 if plot_all == 1
 figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
-subplot(1,2,2)
-imab(ElementCurrents(1).Stream); colorbar; title('a) main layer without regularization');
 subplot(1,2,1)
+imab(ElementCurrents(1).Stream); colorbar; title('a) main layer without regularization');
+subplot(1,2,2)
 imab(ElementCurrents(2).Stream); colorbar; title('b) shielding layer without regularization');
 
 end
 % PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
 %% Calculate the regularized Solution
+% define Tikhonov Matrix
+E_Mat = [Sensitivity(1).ElementFieldsStream Sensitivity(2).ElementFieldsStream];
+btarget = [target_main.field(:); target_shield.field(:)];
 
-ElementCurrents_reg=TikhonovReg(E_Mat, btarget, 0.0077); % regularisation automatically penelizes total power
+W = eye(size(Sensitivity(1).ElementFieldsStream,2));
+
+w = W - circshift(W,segments_angular,1);
+w(1:2*segments_angular,end-2*segments_angular+1:end) = zeros(2*segments_angular);
+
+w_red = w(:,1:end-segments_angular)';
+
+z = zeros(size(w));
+z = zeros(size(w_red));
+
+Reg_mat = [w_red z; z w_red];
+
+tic
+ElementCurrents_Reg_Weigh=TikhonovReg_Weigh(E_Mat, btarget, 5e-2, Reg_mat); 
+toc
+
+
+%% Add additional constraints to enforce peripheral elements to be 0
+
+E_Mat = [Sensitivity(1).ElementFieldsStream Sensitivity(2).ElementFieldsStream];
+
+btarget = [target_main.field(:); target_shield.field(:)];
+
+
+lambda = 1e1;
+
+W = eye(size(Sensitivity(1).ElementFieldsStream ,2));
+
+w = W - circshift(W,segments_angular,2);
+w(1:2*segments_angular,end-2*segments_angular+1:end) = zeros(2*segments_angular);
+
+w_ext = [w; [lambda*eye(segments_angular) zeros(segments_angular,size(Sensitivity(1).ElementFieldsStream,2)-segments_angular)];...
+        [zeros(segments_angular,size(Sensitivity(1).ElementFieldsStream,2)-segments_angular)  lambda*eye(segments_angular) ]];
+
+w_full = [w_ext  zeros(size(w_ext)); zeros(size(w_ext)) w_ext];
+   
+ElementCurrents_Reg_Weigh = TikhonovReg_Weigh(E_Mat, btarget, 5e-1, w_full); 
+
 
 
 %% Plot currents in 2D
 
+n_cont = 15;
+
 main_stop = CoilDefinition(1).num_elements(1)*(CoilDefinition(1).num_elements(2)-1);
 
-ElementCurrents(1).Stream = reshape(ElementCurrents_reg(1:main_stop,:),size(elm_angle)-[0 1]);
-ElementCurrents(2).Stream = reshape(ElementCurrents_reg(main_stop+1:end,:),size(elm_angle)-[0 1]);
+ElementCurrents(1).Stream = reshape(ElementCurrents_Reg_Weigh(1:main_stop,:),size(elm_angle)-[0 1]);
+ElementCurrents(2).Stream = reshape(ElementCurrents_Reg_Weigh(main_stop+1:end,:),size(elm_angle)-[0 1]);
 
-if plot_all == 1
-figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
-subplot(1,2,1)
-imab(ElementCurrents(1).Stream'); colorbar; title('a) regularized main layer');
-subplot(1,2,2)
-imab(ElementCurrents(2).Stream'); colorbar; title('b) regularized shielding layer');
+cont_max = max(max(ElementCurrents(1).Stream))*1;%0.98;
+cont_min = min(min(ElementCurrents(1).Stream))*1;%*0.98;
 
+% figure; set(gcf,'Name','3D coil','Position',[   1   1   1000   500]);
+hold all
+for nP =1:2
+    figure; 
+% subplot(1,2,nP)
+hold all
+imab(ElementCurrents(nP).Stream); colorbar; %title('a) regularized main layer');
+[C,H] = contour(ElementCurrents(nP).Stream' ,[cont_min:((abs(cont_max)+abs(cont_min))/n_cont):cont_max],'k','LineWidth', 2);
 
-PlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents)
-
-
-ContourPlotThinWireStreamFunction3D(CoilDefinition, ElementCurrents, 13)
+% subplot(1,2,nP)
+% imab(ElementCurrents(2).Stream'); colorbar; title('b) regularized shielding layer');
 
 end
+hold off
+
 %% Plot multi layer contours
-
-
 
 nP = 1;
 
 PlotCoord = (CoilDefinition(nP).thin_wire_nodes_start + CoilDefinition(nP).thin_wire_nodes_stop)/2;
 
-n_cont = 13;
+n_cont = 15;
 
 ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];
 % Add two radial columns to not miss iso-contours at radial
 % interconnections
-ElmtsPlot = [ElmtsPlot; ElmtsPlot(1,:)];
+ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
 cont_max_main = max(max(ElmtsPlot));
 [C1,H1] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
 
@@ -221,8 +264,8 @@ n_cont = 13;
 
 ElmtsPlot = [reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]))];% Add two radial columns to not miss iso-contours at radial
 % interconnections
-ElmtsPlot = [ElmtsPlot; ElmtsPlot(1,:)];
-cont_max_main = max(max(ElmtsPlot));
+ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
+% cont_max_main = max(max(ElmtsPlot));
 [C2,H2] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
 
 
@@ -254,9 +297,9 @@ for i = 1:ccount(2)
 end
 
 hold off
-view([-7 25]);
+view([-97 25]);
 
-axis tight equal
+axis tight equal off
 font_size = 12;
 set(gca,'fontsize',font_size)
 

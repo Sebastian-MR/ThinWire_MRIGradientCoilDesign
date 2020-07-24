@@ -31,15 +31,16 @@ for nP = 1:CoilDefinition(1).Partitions
 % Add two radial columns to not miss iso-contours at radial
 % interconnections
     ElmtsPlot = reshape(ElementCurrents(nP).Stream,(CoilDefinition(nP).num_elements -[0 1]));
-    ElmtsPlot = [ElmtsPlot; ElmtsPlot(1,:)];
+    ElmtsPlot = [ElmtsPlot(end,:); ElmtsPlot; ElmtsPlot(1,:)];
     
     
     figure; set(gcf,'Name','Stream Function','Position',[   1   1   500   500]);
     
     hold all
     imab(ElmtsPlot);
-    cont_max_main = max(max(ElmtsPlot));
-    [C,H] = contour(ElmtsPlot(:,:)',[-cont_max_main:(2*cont_max_main/n_cont):cont_max_main],'k','LineWidth', 2);
+    cont_max = max(max(ElmtsPlot))*1;%0.98;
+    cont_min = min(min(ElmtsPlot))*1;%*0.98;
+    [C,H] = contour(ElmtsPlot(:,:)',[cont_min:((abs(cont_max)+abs(cont_min))/n_cont):cont_max],'k','LineWidth', 2);
     % title('Stream Function');
     hold off
     
@@ -65,7 +66,7 @@ for nP = 1:CoilDefinition(1).Partitions
     hold off
     view([-7 25]);
     
-    axis tight equal
+    axis tight equal off
     font_size = 12;
     set(gca,'fontsize',font_size)
     
