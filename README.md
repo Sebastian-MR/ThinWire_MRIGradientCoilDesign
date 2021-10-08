@@ -18,4 +18,6 @@ An explanatory introduction is given in ThinWire_Demo.m. Two basic coils
 are described in the scripts Cylindrical_SingleLayer.m and 
 CylindricalShielded.m.
 
+A publication describing the basic ideas of gradient coil design and this code can be found here: https://www.frontiersin.org/articles/10.3389/fphy.2021.699468/full
+
 Sebastian Littin
